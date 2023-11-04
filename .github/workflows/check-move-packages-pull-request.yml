@@ -29,6 +29,12 @@ jobs:
 
       - uses: ./.github/actions/build-setup
 
+      - name: Install smove from git
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: smove
+          git: https://github.com/eigerco/smove
+
       # move-vm-runtime
 
       - name: Build move-vm-runtime (without default features)
