@@ -1,4 +1,5 @@
 use crate::mock::StorageMock;
+use move_core_types::value::MoveValue;
 use move_vm_backend::Mvm;
 
 use move_core_types::account_address::AccountAddress;
@@ -368,4 +369,213 @@ fn execute_function_test() {
     );
 
     assert!(result.is_ok(), "script execution failed");
+}
+
+#[test]
+fn execute_signer_script_publish_balance_under_the_signer_signer_the_first_arg() {
+    let store = StorageMock::new();
+    let vm = Mvm::new(store).unwrap();
+    let mut gas_status = GasStatus::new_unmetered();
+
+    let addr_std = AccountAddress::from_hex_literal("0x1").unwrap();
+    let stdlib = move_stdlib::move_stdlib_bundle();
+    let result = vm.publish_module_package(&stdlib, addr_std, &mut gas_status);
+
+    assert!(result.is_ok(), "Failed to publish the stdlib bundle");
+
+    let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
+    let module = read_module_bytes_from_project("basic_coin", "BasicCoin");
+    let result = vm.publish_module(&module, address, &mut gas_status);
+
+    assert!(result.is_ok(), "Failed to publish the module");
+
+    let usr_addr = AccountAddress::from_hex_literal("0x5").unwrap();
+    let usr_signer = MoveValue::Signer(usr_addr);
+
+    assert_eq!(bcs::to_bytes(&usr_signer).unwrap(), bcs::to_bytes(&usr_addr).unwrap());
+
+    let script = read_script_bytes_from_project("signer_tests", "publish_balance_under_the_signer__signer_the_first_arg");
+    let signer_param = bcs::to_bytes(&usr_signer).unwrap();
+    let a_param = bcs::to_bytes(&100u32).unwrap();
+    let type_args: Vec<TypeTag> = vec![];
+    let params: Vec<&[u8]> = vec![&signer_param, &a_param];
+
+    let result = vm.execute_script(&script, type_args, params, &mut gas_status);
+
+    if let Err(e) = result {
+        panic!("script failed {e:?}");
+    }
+    assert!(result.is_ok(), "script execution failed");
+
+    let tag = StructTag {
+        address: AccountAddress::from_hex_literal("0xCAFE").unwrap(),
+        module: Identifier::new("BasicCoin").unwrap(),
+        name: Identifier::new("Balance").unwrap(),
+        type_params: vec![],
+    };
+    // Check if the resource exists and is published on our address
+    let result = vm.get_resource(&usr_addr, &bcs::to_bytes(&tag).unwrap());
+
+    // Check if the resource exists
+    assert!(
+        result.unwrap().is_some(),
+        "resource not found in the module"
+    );
+}
+
+#[test]
+fn execute_signer_script_publish_balance_under_the_signer_signer_the_second_arg() {
+    let store = StorageMock::new();
+    let vm = Mvm::new(store).unwrap();
+    let mut gas_status = GasStatus::new_unmetered();
+
+    let addr_std = AccountAddress::from_hex_literal("0x1").unwrap();
+    let stdlib = move_stdlib::move_stdlib_bundle();
+    let result = vm.publish_module_package(&stdlib, addr_std, &mut gas_status);
+
+    assert!(result.is_ok(), "Failed to publish the stdlib bundle");
+
+    let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
+    let module = read_module_bytes_from_project("basic_coin", "BasicCoin");
+    let result = vm.publish_module(&module, address, &mut gas_status);
+
+    assert!(result.is_ok(), "Failed to publish the module");
+
+    let usr_addr = AccountAddress::from_hex_literal("0x5").unwrap();
+    let usr_signer = MoveValue::Signer(usr_addr);
+
+    assert_eq!(bcs::to_bytes(&usr_signer).unwrap(), bcs::to_bytes(&usr_addr).unwrap());
+
+    let script = read_script_bytes_from_project("signer_tests", "publish_balance_under_the_signer__signer_the_second_arg");
+    let signer_param = bcs::to_bytes(&usr_signer).unwrap();
+    let a_param = bcs::to_bytes(&100u32).unwrap();
+    let type_args: Vec<TypeTag> = vec![];
+    let params: Vec<&[u8]> = vec![&a_param, &signer_param];
+
+    let result = vm.execute_script(&script, type_args, params, &mut gas_status);
+
+    if let Err(e) = result {
+        panic!("script failed {e:?}");
+    }
+    assert!(result.is_ok(), "script execution failed");
+
+    let tag = StructTag {
+        address: AccountAddress::from_hex_literal("0xCAFE").unwrap(),
+        module: Identifier::new("BasicCoin").unwrap(),
+        name: Identifier::new("Balance").unwrap(),
+        type_params: vec![],
+    };
+    // Check if the resource exists and is published on our address
+    let result = vm.get_resource(&usr_addr, &bcs::to_bytes(&tag).unwrap());
+
+    // Check if the resource exists
+    assert!(
+        result.unwrap().is_some(),
+        "resource not found in the module"
+    );
+}
+
+#[test]
+fn execute_signer_script_publish_balance_where_signer_is_within_the_vector() {
+    let store = StorageMock::new();
+    let vm = Mvm::new(store).unwrap();
+    let mut gas_status = GasStatus::new_unmetered();
+
+    let addr_std = AccountAddress::from_hex_literal("0x1").unwrap();
+    let stdlib = move_stdlib::move_stdlib_bundle();
+    let result = vm.publish_module_package(&stdlib, addr_std, &mut gas_status);
+
+    assert!(result.is_ok(), "Failed to publish the stdlib bundle");
+
+    let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
+    let module = read_module_bytes_from_project("basic_coin", "BasicCoin");
+    let result = vm.publish_module(&module, address, &mut gas_status);
+
+    assert!(result.is_ok(), "Failed to publish the module");
+
+    let usr_addr = AccountAddress::from_hex_literal("0x5").unwrap();
+    let usr_signer = MoveValue::Signer(usr_addr);
+
+    assert_eq!(bcs::to_bytes(&usr_signer).unwrap(), bcs::to_bytes(&usr_addr).unwrap());
+
+    let script = read_script_bytes_from_project("signer_tests", "publish_balance_where_signer_is_within_the_vector");
+    let signer_param = bcs::to_bytes(&usr_signer).unwrap();
+
+    let signer_vec = bcs::to_bytes(&MoveValue::Vector(vec![usr_signer])).unwrap();
+    let params: Vec<&[u8]> = vec![&signer_vec];
+    let type_args: Vec<TypeTag> = vec![];
+
+    let result = vm.execute_script(&script, type_args, params, &mut gas_status);
+
+    if let Err(e) = result {
+        panic!("script failed {e:?}");
+    }
+    assert!(result.is_ok(), "script execution failed");
+
+    let tag = StructTag {
+        address: AccountAddress::from_hex_literal("0xCAFE").unwrap(),
+        module: Identifier::new("BasicCoin").unwrap(),
+        name: Identifier::new("Balance").unwrap(),
+        type_params: vec![],
+    };
+    // Check if the resource exists and is published on our address
+    let result = vm.get_resource(&usr_addr, &bcs::to_bytes(&tag).unwrap());
+
+    // Check if the resource exists
+    assert!(
+        result.unwrap().is_some(),
+        "resource not found in the module"
+    );
+}
+
+#[test]
+fn execute_signer_script_publish_balance_where_eve_is_within_the_vector() {
+    let store = StorageMock::new();
+    let vm = Mvm::new(store).unwrap();
+    let mut gas_status = GasStatus::new_unmetered();
+
+    let addr_std = AccountAddress::from_hex_literal("0x1").unwrap();
+    let stdlib = move_stdlib::move_stdlib_bundle();
+    let result = vm.publish_module_package(&stdlib, addr_std, &mut gas_status);
+
+    assert!(result.is_ok(), "Failed to publish the stdlib bundle");
+
+    let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
+    let module = read_module_bytes_from_project("basic_coin", "BasicCoin");
+    let result = vm.publish_module(&module, address, &mut gas_status);
+
+    assert!(result.is_ok(), "Failed to publish the module");
+
+    let usr_addr = AccountAddress::from_hex_literal("0x5").unwrap();
+    //let usr_signer = MoveValue::Signer(usr_addr);
+
+
+    let script = read_script_bytes_from_project("signer_tests", "publish_balance_where_signer_is_within_the_vector");
+    let usr_addr_param = MoveValue::Address(usr_addr);
+
+    let signer_vec = bcs::to_bytes(&MoveValue::Vector(vec![usr_addr_param])).unwrap();
+    let params: Vec<&[u8]> = vec![&signer_vec];
+    let type_args: Vec<TypeTag> = vec![];
+
+    let result = vm.execute_script(&script, type_args, params, &mut gas_status);
+
+    if let Err(e) = result {
+        panic!("script failed {e:?}");
+    }
+    assert!(result.is_ok(), "script execution failed");
+
+    let tag = StructTag {
+        address: AccountAddress::from_hex_literal("0xCAFE").unwrap(),
+        module: Identifier::new("BasicCoin").unwrap(),
+        name: Identifier::new("Balance").unwrap(),
+        type_params: vec![],
+    };
+    // Check if the resource exists and is published on our address
+    let result = vm.get_resource(&usr_addr, &bcs::to_bytes(&tag).unwrap());
+
+    // Check if the resource exists
+    assert!(
+        result.unwrap().is_some(),
+        "resource not found in the module"
+    );
 }

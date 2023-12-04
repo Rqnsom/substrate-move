@@ -1,0 +1,7 @@
+[package]
+name = "signer_tests"
+version = "0.0.0"
+
+[dependencies]
+MoveStdlib = { git = "https://github.com/move-language/move.git", subdir = "language/move-stdlib", rev = "main" }
+basic_coin = { local = "../basic_coin" }
