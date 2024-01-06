@@ -3,6 +3,7 @@ use move_core_types::account_address::AccountAddress;
 use move_core_types::identifier::Identifier;
 use move_core_types::language_storage::StructTag;
 use move_core_types::language_storage::CORE_CODE_ADDRESS as ADDR_STD;
+use move_vm_backend::genesis::VmGenesisConfig;
 use move_vm_backend::types::GasAmount;
 use move_vm_backend::Mvm;
 use move_vm_backend_common::types::ModuleBundle;
@@ -244,13 +245,16 @@ fn get_module_and_module_abi() {
 // This test heavily depends on Move.toml files for the used Move packages.
 fn get_resource() {
     let store = StorageMock::new();
-    let vm = Mvm::new(store /*, SimpleSubstrateApiMock {}*/).unwrap();
     let gas = GasStrategy::Unmetered;
 
-    let stdlib = move_stdlib::move_stdlib_bundle();
-    let result = vm.publish_module_bundle(&stdlib, ADDR_STD, gas);
+    // Publish the stdlib.
+    let genesis_cfg = VmGenesisConfig::default();
+    assert!(
+        genesis_cfg.apply(store.clone()).is_ok(),
+        "failed to apply the genesis configuration"
+    );
 
-    assert!(result.is_ok(), "failed to publish the stdlib bundle");
+    let vm = Mvm::new(store /*, SimpleSubstrateApiMock {}*/).unwrap();
 
     let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
     let module = read_module_bytes_from_project("basic_coin", "BasicCoin");
@@ -389,13 +393,16 @@ fn execute_script_generics_incorrect_params_test() {
 #[test]
 fn execute_function_test() {
     let store = StorageMock::new();
-    let vm = Mvm::new(store /*, SimpleSubstrateApiMock {}*/).unwrap();
     let gas = GasStrategy::Unmetered;
 
-    let stdlib = move_stdlib::move_stdlib_bundle();
-    let result = vm.publish_module_bundle(&stdlib, ADDR_STD, gas);
+    // Publish the stdlib.
+    let genesis_cfg = VmGenesisConfig::default();
+    assert!(
+        genesis_cfg.apply(store.clone()).is_ok(),
+        "failed to apply the genesis configuration"
+    );
 
-    assert!(result.is_ok(), "failed to publish the stdlib bundle");
+    let vm = Mvm::new(store /*, SimpleSubstrateApiMock {}*/).unwrap();
 
     let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
     let module = read_module_bytes_from_project("basic_coin", "BasicCoin");
@@ -501,4 +508,40 @@ fn dry_run_gas_strategy_doesnt_update_storage() {
         None,
         "received module although the dry run strategy was enabled"
     );
+}
+
+#[test]
+// TODO(rqnsom): this one should not panic once the native functions are implemented
+#[should_panic]
+// This test heavily depends on Move.toml files for the used Move packages.
+fn genesis_config_initializes_substrate_stdlib() {
+    let store = StorageMock::new();
+    let vm = Mvm::new(store /*, SimpleSubstrateApiMock {}*/).unwrap();
+    let gas = GasStrategy::Unmetered;
+
+    let stdlib = move_stdlib::substrate_stdlib_bundle();
+    let result = vm.publish_module_bundle(&stdlib, ADDR_STD, gas);
+    assert!(result.is_ok(), "failed to publish the substrate stdlib");
+}
+
+#[test]
+// This test heavily depends on Move.toml files for the used Move packages.
+fn genesis_config_initializes_stdlib() {
+    let store = StorageMock::new();
+
+    // Publish the stdlib.
+    let genesis_cfg = VmGenesisConfig::default();
+    assert!(
+        genesis_cfg.apply(store.clone()).is_ok(),
+        "failed to apply the genesis configuration"
+    );
+
+    let vm = Mvm::new(store /*, SimpleSubstrateApiMock {}*/).unwrap();
+
+    let module = read_module_bytes_from_project("using_stdlib_full", "StringAndVector");
+    let address = AccountAddress::from_hex_literal("0x3").unwrap();
+
+    let gas = GasStrategy::DryRun;
+    let result = vm.publish_module(&module, address, gas);
+    assert!(result.is_ok(), "failed to publish the module");
 }
