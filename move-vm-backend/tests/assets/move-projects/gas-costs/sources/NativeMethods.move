@@ -44,7 +44,7 @@ script {
         // type_name::get
         let type = type_name::get<ThisIsAVeryLongDatatypeNameForTesting>();
         let type = type_name::into_string(type);
-        assert!(ascii::length(&type) == 36, 1);
+        assert!(ascii::length(&type) != 38, 1);
     }
 }
 

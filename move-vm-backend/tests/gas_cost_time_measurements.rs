@@ -8,7 +8,7 @@ use std::io::Write;
 pub mod mock;
 
 const FILENAME: &str = "gas-costs-native-function-calls.txt";
-const ITERATIONS: usize = 10;
+const ITERATIONS: usize = 250;
 const BOB: &str = "0x21";
 
 /// Reads bytes from a file for the given path.
@@ -43,51 +43,54 @@ fn gas_cost_measurement() {
     let acc_bob = AccountAddress::from_hex_literal(BOB).unwrap();
     let acc_std = AccountAddress::from_hex_literal("0x1").unwrap();
 
-    let store = StorageMock::new();
-    let mut balance = BalanceMock::new();
-    balance.write_cheque(
-        acc_bob.clone(),
-        1_000_000,
-    );
-    let vm = Mvm::new(store, balance).unwrap();
-
-    assert!(vm
-        .publish_module_bundle(
-            &move_stdlib::move_stdlib_bundle(),
-            acc_std.clone(),
-            GasStrategy::Unmetered
-        )
-        .error_message
-        .is_none());
-    assert!(vm
-        .publish_module_bundle(
-            &move_stdlib::substrate_stdlib_bundle(),
-            acc_std.clone(),
-            GasStrategy::Unmetered
-        )
-        .error_message
-        .is_none());
-    assert!(vm
-        .publish_module(
-            &read_module_bytes_from_project("gas-costs", "Module"),
+    let fresh_vm = || {
+        let store = StorageMock::new();
+        let mut balance = BalanceMock::new();
+        balance.write_cheque(
             acc_bob.clone(),
-            GasStrategy::Unmetered
-        )
-        .error_message
-        .is_none());
+            1_000_000,
+        );
+        let vm = Mvm::new(store, balance).unwrap();
+
+        assert!(vm
+            .publish_module_bundle(
+                &move_stdlib::move_stdlib_bundle(),
+                acc_std.clone(),
+                GasStrategy::Unmetered
+            )
+            .error_message
+            .is_none());
+        assert!(vm
+            .publish_module_bundle(
+                &move_stdlib::substrate_stdlib_bundle(),
+                acc_std.clone(),
+                GasStrategy::Unmetered
+            )
+            .error_message
+            .is_none());
+        assert!(vm
+            .publish_module(
+                &read_module_bytes_from_project("gas-costs", "Module"),
+                acc_bob.clone(),
+                GasStrategy::Unmetered
+            )
+            .error_message
+            .is_none());
+        vm
+    };
 
     let bob = bcs::to_bytes(&acc_bob).unwrap();
     let type_args: Vec<TypeTag> = vec![];
     let params: Vec<&[u8]> = vec![&bob];
 
     let script_names = [
-        "magic_gas_costs_vector",
-        "magic_gas_costs_signer",
-        "magic_gas_costs_type_name1",
-        "magic_gas_costs_type_name2",
-        "magic_gas_costs_balance_cheque_amount",
-        "magic_gas_costs_balance_total_amount",
         "magic_gas_costs_balance_transfer",
+        "magic_gas_costs_vector",
+        "magic_gas_costs_type_name1",
+        "magic_gas_costs_signer",
+        "magic_gas_costs_balance_cheque_amount",
+        "magic_gas_costs_type_name2",
+        "magic_gas_costs_balance_total_amount",
     ];
 
     let data_files = [
@@ -128,15 +131,25 @@ fn gas_cost_measurement() {
 
     for n in 0..script_names.len() {
         let script = read_script_bytes_from_project("gas-costs", script_names[n]);
+        println!("running {}", script_names[n]);
 
         for _ in 0..ITERATIONS {
+            let store = StorageMock::new();
+            let mut balance = BalanceMock::new();
+            balance.write_cheque(
+                acc_bob.clone(),
+                1_000_000,
+            );
+            let vm = fresh_vm();
+            std::thread::sleep(std::time::Duration::from_millis(10));
             let type_args1 = type_args.clone();
             let params1 = params.clone();
+            std::thread::sleep(std::time::Duration::from_millis(20));
             let result = vm.execute_script(&script, type_args1, params1, GasStrategy::Unmetered);
             if let Some(msg) = result.error_message {
                 panic!("MVM ececution error: {msg:?}");
             }
-            std::thread::sleep(std::time::Duration::from_millis(50));
+            std::thread::sleep(std::time::Duration::from_millis(20));
         }
 
         for fname in data_files.iter() {
