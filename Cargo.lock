@@ -3724,6 +3724,7 @@ dependencies = [
  "move-prover-boogie-backend",
  "move-prover-test-utils",
  "move-stackless-bytecode",
+ "move-stdlib",
  "num 0.4.2",
  "once_cell",
  "pretty",

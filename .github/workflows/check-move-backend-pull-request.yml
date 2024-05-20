@@ -1,7 +1,7 @@
 name: Check move-vm-backend
 
 on:
-  pull_request:
+  main:
     branches:
       - main
     paths:
