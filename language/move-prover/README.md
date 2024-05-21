@@ -5,7 +5,6 @@ custom_edit_url: https://github.com/move-language/move/edit/main/language/move-p
 ---
 
 
-
 ## Code under this subtree is experimental. It is out of scope for [the Diem Bug Bounty](https://hackerone.com/diem) until it is no longer marked experimental.
 
 # The Move Prover
